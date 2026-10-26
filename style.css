@@ -30,6 +30,8 @@
 #comment-form>.secondary{margin-left:8px}
 button:disabled{opacity:.6;cursor:wait}
 .rating-summary{font-size:12px;color:#92702c;margin:0 0 13px}
+.card-feedback{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.comment-count{color:var(--muted)}
 .reviews{border-top:1px solid var(--line);margin-top:28px;padding-top:15px}
 .star-picker{border:0;padding:0;margin:20px 0 0;min-width:0}
 .star-picker legend{font-size:12px;font-weight:600;margin-bottom:10px}
