@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "",
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "{index.html,app.js,account.js,photos.js,style.css,legacy-export.html,seeds.json,database/neon-schema.sql}",
+      "maxDuration": 30
+    }
+  },
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.js"
+    }
+  ]
+}

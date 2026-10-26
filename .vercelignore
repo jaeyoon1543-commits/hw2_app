@@ -1,0 +1,10 @@
+.env
+.env.*
+.git
+.runtime
+data
+node_modules
+test
+README.md
+start.cmd
+start.ps1

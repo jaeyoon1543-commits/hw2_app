@@ -1,11 +1,13 @@
 let signupMode=false;
 const owns=record=>!!currentUser&&record.ownerId===currentUser.id;
-function openLogin(){$('#auth-error').textContent='';$('#auth').showModal()}
+function resetAuthForm(){$('#auth-form').reset();$('#auth-error').textContent=''}
+function openLogin(){resetAuthForm();$('#auth').showModal()}
 function requireLogin(){if(currentUser)return true;openLogin();return false}
-async function api(url,method='GET',body){let response;try{response=await fetch(url,{method,credentials:'same-origin',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined})}catch{throw new Error('서버에 연결할 수 없습니다. start.ps1로 서버를 실행해주세요.')}let data;try{data=await response.json()}catch{throw new Error('SQLite 서버 주소 http://localhost:3000 에서 열어주세요.')}if(!response.ok)throw new Error(data.error||'요청을 처리하지 못했습니다.');return data}
+async function api(url,method='GET',body){let response;try{response=await fetch(url,{method,credentials:'same-origin',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined})}catch{throw new Error('서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.')}let data;try{data=await response.json()}catch{throw new Error('서버 응답을 확인할 수 없습니다. 앱 접속 비밀번호와 배포 설정을 확인해주세요.')}if(!response.ok)throw new Error(data.error||'요청을 처리하지 못했습니다.');return data}
 async function loadState(){const state=await api('/api/state');currentUser=state.user;custom=state.recipes;reviews=state.reviews;bookmarks=state.bookmarks;renderPopularSearches(state.popularSearches||[]);refreshAccount()}
 function refreshAccount(){$('#account-name').textContent=currentUser?currentUser.nickname+' 님':'';$('#account-button').textContent=currentUser?'로그아웃':'로그인';render();if($('#detail').open&&activeRecipeId){if(custom.some(r=>r.id===activeRecipeId))showDetail(activeRecipeId);else $('#detail').close()}}
 $('#auth .close').onclick=()=>$('#auth').close();
+$('#auth').addEventListener('close',resetAuthForm);
 $('#account-button').onclick=async()=>{if(!currentUser){openLogin();return}try{await api('/api/logout','POST',{});$('#editor').close();editingRecipeId=null;await loadState();notify('로그아웃했습니다.')}catch(e){notify(e.message)}};
 $('#auth-toggle').onclick=()=>{signupMode=!signupMode;$('#auth-title').textContent=signupMode?'회원가입':'로그인';$('#auth-submit').textContent=signupMode?'가입하고 로그인':'로그인';$('#auth-toggle').textContent=signupMode?'로그인으로 전환':'회원가입으로 전환';$('#nickname-label').hidden=!signupMode;$('#auth-form').elements.nickname.required=signupMode;$('#auth-form').elements.password.autocomplete=signupMode?'new-password':'current-password';$('#auth-error').textContent=''};
 $('#auth-form').onsubmit=async e=>{e.preventDefault();const f=e.target;$('#auth-submit').disabled=true;$('#auth-toggle').disabled=true;try{await api('/api/auth/'+(signupMode?'signup':'login'),'POST',{username:f.elements.username.value.trim(),password:f.elements.password.value,nickname:f.elements.nickname.value.trim()});f.reset();$('#auth').close();await loadState();notify('로그인되었습니다.')}catch(error){$('#auth-error').textContent=error.message}finally{$('#auth-submit').disabled=false;$('#auth-toggle').disabled=false}};
@@ -59,5 +61,8 @@ function bindReviewForm(id,editing=false){
 }
 
 
-$('#import-backup').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;if(!requireLogin()){e.target.value='';return}try{if(file.size>15*1024*1024)throw new Error('백업은 15MB 이하여야 합니다.');const payload=JSON.parse(await file.text());if(!confirm('백업의 레시피·댓글·별점을 현재 로그인한 계정으로 가져올까요?'))return;const result=await api('/api/import','POST',payload);await loadState();notify(result.count+'개의 레시피를 가져왔습니다.')}catch(error){notify(error.message)}finally{e.target.value=''}};
+$('#import-backup').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;if(!requireLogin()){e.target.value='';return}try{if(file.size>3*1024*1024)throw new Error('백업은 3MB 이하여야 합니다.');const payload=JSON.parse(await file.text());if(!confirm('백업의 레시피·댓글·별점을 현재 로그인한 계정으로 가져올까요?'))return;const result=await api('/api/import','POST',payload);await loadState();notify(result.count+'개의 레시피를 가져왔습니다.')}catch(error){notify(error.message)}finally{e.target.value=''}};
 render();loadState().catch(error=>{$('#server-error').hidden=false;$('#server-error').textContent=error.message});
+
+
+if(new URLSearchParams(location.search).get('login')==='1')openLogin();
