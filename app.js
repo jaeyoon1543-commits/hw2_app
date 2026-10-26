@@ -1,6 +1,7 @@
 const $ = (s) => document.querySelector(s);
 const samples=[];
 let custom=[],reviews=[],currentUser=null,bookmarks=[];
+let stateLoaded=false,stateLoading=true,stateError='';
 let editingRecipeId=null,activeRecipeId=null;
 let category='전체',onlySaved=false,onlyMine=false;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -12,6 +13,16 @@ function fixImages(){document.querySelectorAll('img').forEach(img=>img.onerror=(
 function notify(message){$('#toast').textContent=message;$('#toast').style.display='block';clearTimeout(notify.timer);notify.timer=setTimeout(()=>$('#toast').style.display='none',2600)}
 function render(){
  $('#filters').innerHTML=['전체','한식','양식','중식','일식','디저트','기타'].map(c=>`<button class="filter ${c===category?'active':''}" data-category="${c}" aria-pressed="${c===category}">${c}</button>`).join('');
+ $('#recipe-status').hidden=stateLoaded;
+ $('#grid').setAttribute('aria-busy',String(!stateLoaded&&stateLoading));
+ if(!stateLoaded){
+  $('#grid').innerHTML='';$('#empty').hidden=true;
+  $('#recipe-status').classList.toggle('loading',stateLoading);
+  $('#recipe-status-text').textContent=stateLoading?'레시피를 불러오는 중…':'레시피를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.';
+  $('#retry-recipes').hidden=stateLoading;
+  $('#result-count').textContent=stateLoading?'불러오는 중…':'';
+  return;
+ }
  const q=$('#search').value.trim().toLowerCase();let list=(onlyMine?custom.filter(r=>currentUser&&r.ownerId===currentUser.id):[...custom,...samples]).filter(r=>(category==='전체'||r.category===category)&&(!onlySaved||bookmarks.includes(r.id))&&(!q||[r.title,r.description,...r.ingredients].join(' ').toLowerCase().includes(q)));
  if($('#sort').value==='quick')list.sort((a,b)=>a.time-b.time);
  if($('#sort').value==='saved')list.sort((a,b)=>(b.saveCount||0)-(a.saveCount||0));

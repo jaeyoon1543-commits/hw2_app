@@ -4,7 +4,13 @@ function resetAuthForm(){$('#auth-form').reset();$('#auth-error').textContent=''
 function openLogin(){resetAuthForm();$('#auth').showModal()}
 function requireLogin(){if(currentUser)return true;openLogin();return false}
 async function api(url,method='GET',body){let response;try{response=await fetch(url,{method,credentials:'same-origin',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined})}catch{throw new Error('서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.')}let data;try{data=await response.json()}catch{throw new Error('서버 응답을 확인할 수 없습니다. 앱 접속 비밀번호와 배포 설정을 확인해주세요.')}if(!response.ok)throw new Error(data.error||'요청을 처리하지 못했습니다.');return data}
-async function loadState(){const state=await api('/api/state');currentUser=state.user;custom=state.recipes;reviews=state.reviews;bookmarks=state.bookmarks;renderPopularSearches(state.popularSearches||[]);refreshAccount()}
+async function loadState(){
+ if(!stateLoaded){stateLoading=true;stateError='';render()}
+ try{
+  const state=await api('/api/state');currentUser=state.user;custom=state.recipes;reviews=state.reviews;bookmarks=state.bookmarks;
+  stateLoaded=true;stateLoading=false;stateError='';renderPopularSearches(state.popularSearches||[]);refreshAccount();
+ }catch(error){if(!stateLoaded){stateLoading=false;stateError=error.message;render()}throw error}
+}
 function refreshAccount(){$('#account-name').textContent=currentUser?currentUser.nickname+' 님':'';$('#account-button').textContent=currentUser?'로그아웃':'로그인';render();if($('#detail').open&&activeRecipeId){if(custom.some(r=>r.id===activeRecipeId))showDetail(activeRecipeId);else $('#detail').close()}}
 $('#auth .close').onclick=()=>$('#auth').close();
 $('#auth').addEventListener('close',resetAuthForm);
@@ -62,7 +68,8 @@ function bindReviewForm(id,editing=false){
 
 
 $('#import-backup').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;if(!requireLogin()){e.target.value='';return}try{if(file.size>3*1024*1024)throw new Error('백업은 3MB 이하여야 합니다.');const payload=JSON.parse(await file.text());if(!confirm('백업의 레시피·댓글·별점을 현재 로그인한 계정으로 가져올까요?'))return;const result=await api('/api/import','POST',payload);await loadState();notify(result.count+'개의 레시피를 가져왔습니다.')}catch(error){notify(error.message)}finally{e.target.value=''}};
-render();loadState().catch(error=>{$('#server-error').hidden=false;$('#server-error').textContent=error.message});
+$('#retry-recipes').onclick=()=>loadState().catch(()=>{});
+render();loadState().catch(()=>{});
 
 
 if(new URLSearchParams(location.search).get('login')==='1')openLogin();
